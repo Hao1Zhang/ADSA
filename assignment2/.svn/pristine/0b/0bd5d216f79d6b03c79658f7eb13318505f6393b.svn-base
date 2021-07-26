@@ -1,0 +1,525 @@
+/*
+ * @Author       : Hao Zhang
+ * @Date         : 2021-04-20 17:25:35
+ * @LastEditors  : Hao Zhang
+ * @LastEditTime : 2021-05-06 17:27:27
+ * @FilePath     : \adsa\assignment2\main.cpp
+ */
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <vector>
+#include <cstring>
+#include <iterator>
+#include <fstream>
+using namespace std;
+
+//this part is for the class definition
+class Node
+{
+private:
+public:
+    Node();
+    Node(int value);
+    Node *parent;
+    Node *parent_right;
+    Node *left;
+    Node *right;
+    int value;
+    int hl;
+    int hr;
+    int height;
+    ~Node();
+};
+
+Node::Node()
+{
+    value = -1;
+    left = nullptr;
+    right = nullptr;
+    parent = nullptr;
+    parent_right = nullptr;
+    hl = 0;
+    hr = 0;
+    height = 1;
+}
+
+Node::Node(int p_value)
+{
+    value = p_value;
+    left = nullptr;
+    right = nullptr;
+    parent = nullptr;
+    parent_right = nullptr;
+    hl = 0;
+    hr = 0;
+    height = 1;
+}
+
+Node::~Node()
+{
+    delete this;
+}
+
+//these are some basic functionsto check if the tree is balance
+int check_h(Node *node)
+{
+    if (node == NULL)
+    {
+        return 0;
+    }
+    return node->height;
+}
+
+int getBalance(Node *node)
+{
+    if (node == NULL)
+    {
+        return 0;
+    }
+    return check_h(node->left) - check_h(node->right);
+}
+
+//these are for rotation
+void leftRotate(Node *parent)
+{
+    Node *v = parent;
+    Node *x = parent->right;
+    Node *B = x->left;
+
+    if (v->parent != nullptr) //v is the left node of its parent
+    {
+        x->parent_right = nullptr;
+        x->parent = v->parent;
+        v->parent->left=x;
+        v->parent = nullptr;
+    }
+
+    if (v->parent_right != nullptr) //v is the right node of its parent
+    {
+        x->parent = nullptr;
+        x->parent_right = v->parent_right;
+        v->parent_right->right=x;
+        v->parent = nullptr;
+    }
+
+    x->left = v;
+    v->parent = x;
+    v->parent_right = nullptr;
+
+    v->right = B;
+    if (B != nullptr)
+    {
+        B->parent_right = v;
+        B->parent = nullptr;
+    }
+
+    //recheck the heifht of v and x
+    v->height = max(check_h(v->left), check_h(v->right)) + 1;
+    x->height = max(check_h(x->left), check_h(x->right)) + 1;
+}
+
+void rightRotate(Node *parent)
+{
+
+    Node *v = parent;
+    Node *x = parent->left;
+    Node *B = x->right;
+
+    if (v->parent != nullptr) //v is the left node of its parent
+    {
+        x->parent_right = nullptr;
+        x->parent = v->parent;
+        v->parent->left=x;
+        v->parent = nullptr;
+        // cout<<"done"<<endl;
+    }
+    if (v->parent_right != nullptr) //v is the right node of its parent
+    {
+        x->parent = nullptr;
+        x->parent_right = v->parent_right;
+        // cout<<"done"<<endl;
+        // cout<<x->parent_right->value<<endl;
+        v->parent_right->right=x;
+        v->parent_right = nullptr;
+    }
+
+    x->right = v;
+    v->parent_right = x;
+
+    v->left = B;
+    if (B != nullptr)
+    {
+        B->parent_right = nullptr;
+        B->parent = v;
+    }
+    //recount the height of v and x
+    v->height = max(check_h(v->left), check_h(v->right)) + 1;
+    x->height = max(check_h(x->left), check_h(x->right)) + 1;
+
+    // cout << "v: " << v->height << endl;
+    // cout << "x: " << x->height << endl;
+}
+
+void leftRightRotate(Node *parent)
+{
+    leftRotate(parent->left);
+    rightRotate(parent);
+}
+
+void rightLeftRotate(Node *parent)
+{
+    rightRotate(parent->right);
+    leftRotate(parent);
+}
+
+//for add or delete node
+
+void add_node(Node *new_node, Node *parent)
+{
+    // cout<<"begin"<<endl;
+    if (new_node->value < parent->value) //go to left
+    {
+        // parent->balance = parent->balance - 1;
+        if (parent->left == nullptr)
+        {
+            
+            parent->left = new_node;
+            new_node->parent = parent;
+            parent->height = 1 + max(check_h(parent->left), check_h(parent->right));
+        }
+        else
+        {
+            add_node(new_node, parent->left);
+        }
+    }
+    if (new_node->value > parent->value) //go to right
+    {
+        if (parent->right == nullptr)
+        {
+            
+            parent->right = new_node;
+            new_node->parent_right = parent;
+            parent->height = 1 + max(check_h(parent->left), check_h(parent->right));
+        }
+        else
+        {
+            add_node(new_node, parent->right);
+        }
+    }
+    //check getBalance
+    int balance = getBalance(parent);
+
+    //recount the height
+    parent->height = 1 + max(check_h(parent->left), check_h(parent->right));
+    // cout <<"Node "<<parent->value<<endl;
+    // cout<<"height "<<parent->height<<endl;
+    // cout<<"h_left: "<<check_h(parent->left)<<endl;
+    // cout<<"h_right: "<<check_h(parent->right)<<endl;
+    // cout << "balance: "<<balance << endl;
+    // cout<<endl;
+    if (balance > 1) //left node of parent
+    {
+        if (new_node->value < parent->left->value) //left left
+        {
+            rightRotate(parent);
+        }
+        else if (new_node->value > parent->left->value) //left right
+        {
+            leftRightRotate(parent);
+        }
+    }
+    if (balance < -1)
+    {
+        if (new_node->value > parent->left->value)
+        {
+            leftRotate(parent);
+        }
+        else if (new_node->value < parent->left->value)
+        {
+            rightLeftRotate(parent);
+        }
+    }
+    // cout<<"done"<<endl;
+}
+
+Node *search_node(int value, Node *parent)
+{
+
+    if (value < parent->value) //go to left
+    {
+        return search_node(value, parent->left);
+    }
+    else if (value > parent->value) //go to right
+    {
+        return search_node(value, parent->right);
+    }
+    else
+    {
+        return parent;
+    }
+}
+
+void delete_node(int value, Node *top)
+{
+    // cout<<value<<endl;
+    Node *this_node = search_node(value, top);
+    cout << this_node->value << endl;
+    //if dont have any children
+    if (this_node->right == nullptr && this_node->left == nullptr)
+    {
+        if (this_node->parent == nullptr) //this node is one the right of its parent
+        {
+            this_node->parent->right = nullptr;
+        }
+        if (this_node->parent_right == nullptr) //this node is one the left of its parent
+        {
+            this_node->parent->left = nullptr;
+        }
+    }
+}
+
+//following part is for displaying
+
+/**
+ * @description: show the tree line by line
+ * @param {*}
+ * @return {*}
+ */
+
+void show_pre(Node *top)
+{
+
+    if (top->left != nullptr)
+    {
+        Node *left = top->left;
+        cout << left->value << " ";
+    }
+    if (top->right != nullptr)
+    {
+        Node *right = top->right;
+        cout << right->value << " ";
+    }
+
+    if (top->left != nullptr)
+    {
+        Node *left = top->left;
+        show_pre(left);
+    }
+    if (top->right != nullptr)
+    {
+        Node *right = top->right;
+        show_pre(right);
+    }
+}
+
+/**
+ * @description: show the result when in is called
+ *                  first go to the bottom and when return,show the value
+ * @param {Node} *top
+ * @return {*}
+ */
+
+Node *go_to_bottom_left(Node *top)
+{
+    Node *current_node = top->right;
+    while (current_node->left != nullptr)
+    {
+        current_node = current_node->left;
+    }
+    return current_node;
+}
+/**
+ * @description: take the bottom left node and show the whole tree from left to right
+ * @param {Node} *bottom_left
+ * @return {*}
+ */
+void show_in(Node *bottom_left)
+{
+    Node *current_node = bottom_left;
+    cout << current_node->value << " ";
+    if (current_node->right != nullptr)
+    {
+        Node *temp_node = go_to_bottom_left(current_node);
+        show_in(temp_node);
+    }
+    if (current_node->parent != nullptr)
+    {
+        current_node = current_node->parent;
+        show_in(current_node);
+    }
+}
+
+/**
+ * @description: make an empty tree
+ * @param {*}
+ * @return {*}
+ */
+//go right: no parent
+//go left: parent
+
+Node *make_tree(Node *top)
+{
+
+    Node *node1 = new Node(1);
+    top->right = node1;
+
+    Node *node2 = new Node(2);
+    node2->parent = node1;
+    node1->left = node2;
+
+    Node *node3 = new Node(3);
+    node1->right = node3;
+
+    Node *node4 = new Node(4);
+    node2->right = node4;
+
+    Node *node5 = new Node(5);
+    node5->parent = node4;
+    node4->left = node5;
+    Node *node6 = new Node(6);
+    node4->right = node6;
+
+    return top;
+}
+
+int countSpaces(char input[])
+{
+    int num = 0;
+    char letterRead = ' ';
+
+    for (int i = 0; input[i] > letterRead; i++)
+    {
+        if (letterRead == ' '){
+        num++;
+        }
+    }
+
+    return num;
+}
+
+// int main()
+// {
+//     string inputData;
+//     getline(cin, inputData);
+//     istringstream is(inputData);
+//     //Convert the inputData and store in vectors - vectorData
+//     vector<string> vectorData((istream_iterator<string>(is)), istream_iterator<string>());
+
+//     //make tree
+//     Node *top = new Node();
+//     // top = make_tree(top); //for test
+//     for (int i = 0; i < vectorData.size() - 1; i++)
+//     {
+//         string temp = vectorData[i];
+//         if (temp[0] = 'A')
+//         {
+//             temp.erase(0, 1);
+//             int value;
+//             stringstream function(temp);
+//             function >> value;
+//             Node *current_node = new Node(value);
+//             if (top->right == nullptr)
+//             {
+//                 top->right = current_node;
+//             }
+//             else
+//             {
+//                 add_node(current_node, top->right);
+//             }
+//         }
+//         if (temp[0] = 'D')
+//         {
+//             temp.erase(0, 1);
+//             int value;
+//             stringstream function(temp);
+//             function >> value;
+//             Node *current_node = new Node(value);
+//             delete_node(value, top->right);
+//         }
+//     }
+
+//     string show_type = vectorData[vectorData.size()-1];
+//     if (show_type == "POST" || show_type == "IN")
+//     {
+
+//         Node *bottom_left = go_to_bottom_left(top);
+//         show_in(bottom_left);
+//     }
+//     if (show_type == "PRE")
+//     {
+//         show_pre(top);
+//     }
+
+//     return 0;
+// }
+
+int main(int argc, char **argv)
+{
+    Node *top = new Node();
+    // read inputs
+
+    string inputData;
+    getline(cin, inputData);
+    istringstream is(inputData);
+    //Convert the inputData and store in vectors - vectorData
+    vector<string> vectorData((istream_iterator<string>(is)), istream_iterator<string>());
+    // for (int i = 0; i < vectorData.size() - 1; i++)
+    // {
+    //     cout<<vectorData[i]<<endl;
+    // }
+
+    // top = make_tree(top); //for test
+    int size = vectorData.size();
+    for (int i = 0; size - 1; i++)
+    {
+        string temp = vectorData[i];
+        if (temp[0] == 'A')
+        {
+            temp.erase(0, 1);
+            int value;
+            stringstream function(temp);
+            function >> value;
+            // cout <<value << endl;
+            Node *current_node = new Node(value);
+            if (top->right == nullptr)
+            {
+                top->right = current_node;
+                current_node->parent_right = top;
+            }
+            else
+            {
+                // cout << "Node " << current_node->value << endl;
+                add_node(current_node, top->right);
+                // cout << "Node " << current_node->value <<"done"<< endl;
+            }
+        }
+        else
+        {
+            temp.erase(0, 1);
+            int value;
+            stringstream function(temp);
+            function >> value;
+            // Node *current_node = new Node(value);
+            delete_node(value, top->right);
+        }
+    }
+
+    string show_type = vectorData[vectorData.size() - 1];
+    // if (show_type == "POST" || show_type == "IN")
+    // {
+
+    //     Node *bottom_left = go_to_bottom_left(top);
+    //     show_in(bottom_left);
+    // }
+    // if (show_type == "PRE")
+    // {
+    //     show_pre(top);
+    // }
+
+    show_pre(top);
+    cout << endl;
+    Node *bottom_left = go_to_bottom_left(top);
+    show_in(bottom_left);
+    return 0;
+}

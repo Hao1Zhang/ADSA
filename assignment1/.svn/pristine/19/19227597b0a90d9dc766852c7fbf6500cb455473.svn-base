@@ -1,0 +1,10 @@
+/*
+ * @Author       : Hao Zhang
+ * @Date         : 2021-04-03 22:23:48
+ * @LastEditors  : Hao Zhang
+ * @LastEditTime : 2021-04-03 22:24:09
+ * @FilePath     : \adsa\assignment1\a.cpp
+ */
+int main(){
+    std::cout <<"hello"<<std::endl;
+}
